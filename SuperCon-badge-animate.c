@@ -108,7 +108,7 @@ const uint8_t font_5x8[] = {
 0x04,0x02,0x1C,0x00,0x36,0x08,0x36,0x00,0x00,0x32,0x09,0x3E,0x00,0x00,0x26,0x2A,0x32,0x00
 };
 
-uint16_t* image_current = image_x;
+uint16_t* image_current = image_had;
 
 uint8_t ballX = 4;
 uint8_t ballY = 0;
@@ -212,17 +212,17 @@ inline void rope() {
     scroll_down();
 }
 
-void drawImage(const uint16_t *image, int8_t index) {
+void drawImage(const uint16_t *image, int8_t index, uint8_t xor) {
     index &= 0x0f;
     for(int i = 0; i <= 15; i++){
         if(index > 0)
-            Buffer[i] = (uint8_t)(image[i] >> index) & 0xff;
+            Buffer[i] = ((uint8_t)(image[i] >> index) & 0xff) ^ xor;
         else
-            Buffer[i] = (uint8_t)(image[i] >> index) & 0xff;
+            Buffer[i] = ((uint8_t)(image[i] >> index) & 0xff) ^ xor;
     }
 }
 
-inline void image() {
+inline void image(uint8_t xor) {
     static int8_t f = 0;
     //f += (int8_t)AccXhigh;
     //if( f < 0) f = -1;
@@ -234,7 +234,7 @@ inline void image() {
     //f++;
     //if(f > 15) f = 0;
 
-    if( f >= 0 && f <=15) drawImage(image_current, f);
+    if( f >= 0 && f <=15) drawImage(image_current, f, xor);
     else drawNothing();
     //Buffer[0] = f;
 }
@@ -290,9 +290,9 @@ void animateBadge(void) {
     uint32_t nextTime = getTime();
     uint16_t count = 0;
     int8_t task = 0;
-    const uint8_t task_max = 4;
+    const uint8_t task_max = 3;
     uint16_t next = 50;
-    char str[] = "Hackaday Superconference 2016";
+    char str[] = "Hackaday Superconference 2016 by Professor Papa J from PONTECH.COM  ";
     //char str[] = "abcdefghijklmnopqrstuvwxyz";
     
     while(1) {
@@ -313,32 +313,22 @@ void animateBadge(void) {
             if(task > task_max) task = 0;
             switch(task){
                 case 0:
-                    next = 50;
-                    rope();
-                    break;
-                case 1:
-                    next = 50;
-                    image();
-                    break;
-                case 2:
-                    next = 100;
-                    Buffer[15] = font_8x5[count];
-                    count = (count + 1) % sizeof(font_8x5);
-                    scroll_up();
-                    break;
-                case 3:
-                    next = 1000;
-                    draw(str[count]);
-                    count = (count + 1) % (sizeof(str)-1);
-                    //draw(count);
-                    //count = (count + 1) % 90;
-                    Buffer[15] = count;
-                    break;
-                case 4:
                     next = 100;
                     draw_line(str[count >> 3], count);
                     count = (count + 1) % ((sizeof(str) - 1) * 8);
                     scroll_up();
+                    break;
+                case 1:
+                    next = 50;
+                    image(0x00);
+                    break;
+                case 2:
+                    next = 50;
+                    image(0xff);
+                    break;
+                case 3:
+                    next = 50;
+                    rope();
                     break;
             }            
             displayLatch();
