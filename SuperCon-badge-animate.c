@@ -290,12 +290,26 @@ void animateBadge(void) {
     uint32_t nextTime = getTime();
     uint16_t count = 0;
     int8_t task = 0;
-    const uint8_t task_max = 3;
+    const uint8_t task_max = 4;
     uint16_t next = 50;
     char str[] = "Hackaday Superconference 2016 by Professor Papa J from PONTECH.COM  ";
     //char str[] = "abcdefghijklmnopqrstuvwxyz";
-    
+    uint8_t adc_last = 0;
+    int8_t t;
+
+    PMD1 = PMD1 & 0xfb;
+    ANSELB = ANSELB | 0x01;
+    TRISB = TRISB | 0x01;   // set RB0 as input
+    //ADCON2 = 0x80 | 0x35;          // Give us some 16 Tad clocks and Fosc/8...
+    ADCON2 = 0x00 | 0x31;          // Give us some 16 Tad clocks and Fosc/8...
+    ADCON1 = 0x00;          // 
+    ADCON0 = 0x33;          // Select AN12 (RB0) and start conversion
     while(1) {
+        if( ! (ADCON0 & 0x02 ) ) {
+            adc_last = ADRESH;
+            //adc_last = ADRESL;
+            ADCON0 = 0x33;
+        }
         
         //This shows how to use non-blocking getTime() function
         if (getTime() > nextTime) {
@@ -313,7 +327,7 @@ void animateBadge(void) {
             if(task > task_max) task = 0;
             switch(task){
                 case 0:
-                    next = 100;
+                    next = 75;
                     draw_line(str[count >> 3], count);
                     count = (count + 1) % ((sizeof(str) - 1) * 8);
                     scroll_up();
@@ -329,6 +343,43 @@ void animateBadge(void) {
                 case 3:
                     next = 50;
                     rope();
+                    break;
+                case 4:
+                    next = 50;
+                    t = (int8_t)adc_last - 0x7f;
+                    if( t < 0 ) t = -t;
+                    
+                    switch(t >> 4){
+                        case 7:
+                            Buffer[0] = 0b11111111;
+                            break;
+                        case 6:
+                            Buffer[0] = 0b01111111;
+                            break;
+                        case 5:
+                            Buffer[0] = 0b00111111;
+                            break;
+                        case 4:
+                            Buffer[0] = 0b00011111;
+                            break;
+                        case 3:
+                            Buffer[0] = 0b00001111;
+                            break;
+                        case 2:
+                            Buffer[0] = 0b00000111;
+                            break;
+                        case 1:
+                            Buffer[0] = 0b00000011;
+                            break;
+                        case 0:
+                            Buffer[0] = 0b00000001;
+                            break;
+                        default:
+                            Buffer[0] = 0b00000000;
+                            break;
+                    }
+                    //Buffer[0] = 0x01 << (adc_last >> 5);
+                    scroll_down();
                     break;
             }            
             displayLatch();
